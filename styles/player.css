@@ -1055,14 +1055,22 @@ body[data-focus="1"] .transport {
   .rail-tab { padding: 14px 10px; font-size: 12px; }
   .search-row { padding: 12px 6px; min-height: 56px; }
 
-  /* TRANSPORT — floating card on mobile */
+  /* TRANSPORT — floating card on mobile.
+     Pulled out of the grid via position: fixed because iOS Safari was
+     not honoring margins on the stretched grid item, leaving the card
+     glued to the cell edges. Explicit left/right/bottom dodges the
+     ambiguity and keeps the float deterministic across engines. */
   .transport {
-    grid-column: 1;
-    grid-row: 3;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    grid-column: unset;
+    grid-row: unset;
     grid-template-columns: 1fr;
     grid-template-rows: auto auto;
     gap: 8px;
-    margin: 0 12px calc(16px + env(safe-area-inset-bottom, 0px));
+    margin: 0;
     padding: 14px 16px 16px;
     align-items: stretch;
     border-top: none;
@@ -1071,6 +1079,7 @@ body[data-focus="1"] .transport {
     box-shadow:
       0 6px 22px rgba(15, 13, 11, 0.32),
       0 2px 6px rgba(15, 13, 11, 0.18);
+    z-index: 40;
   }
   /* Hide the amber stripe at top — clashes with rounded card corners */
   .transport::before { display: none; }
