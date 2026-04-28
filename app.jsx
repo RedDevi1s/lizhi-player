@@ -115,13 +115,14 @@ function App() {
   useEffect(() => {
     const a = audioRef.current;
     if (!a || !track) return;
+    setCurrent(0);
+    setDuration(0);
+    setBuffered(0);
     setLoading(true);
     setError("");
     a.src = track.url;
     a.volume = muted ? 0 : volume;
-    if (playing) {
-      a.play().catch(e => { setError("无法加载：" + track.name); setPlaying(false); });
-    }
+    a.load();
   }, [queueAlbumIdx, queueIdx]);
 
   // play/pause sync
@@ -129,11 +130,15 @@ function App() {
     const a = audioRef.current;
     if (!a) return;
     if (playing) {
-      a.play().catch(e => { setError("播放失败"); setPlaying(false); });
+      a.play().catch((e) => {
+        if (e?.name === "AbortError") return;
+        setError("播放失败");
+        setPlaying(false);
+      });
     } else {
       a.pause();
     }
-  }, [playing]);
+  }, [playing, queueAlbumIdx, queueIdx]);
 
   // volume
   useEffect(() => {
