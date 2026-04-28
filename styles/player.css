@@ -965,11 +965,14 @@ body[data-focus="1"] .transport {
   /* Hide desktop gutter */
   .gutter { display: none; }
 
-  /* Stage takes the middle row */
+  /* Stage takes the middle row.
+     Bottom padding has to clear the floating transport card (~124px tall,
+     16px lifted from screen bottom) plus safe-area, otherwise the last few
+     tracks scroll under the floating transport. */
   .stage {
     grid-column: 1;
     grid-row: 2;
-    padding: 20px 18px 24px;
+    padding: 20px 18px calc(160px + env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -1020,7 +1023,7 @@ body[data-focus="1"] .transport {
     left: 0;
     transform: translateX(-105%);
     border-right: 1px solid var(--ink);
-    padding: 20px 18px calc(150px + env(safe-area-inset-bottom, 0px));
+    padding: 20px 18px calc(160px + env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -1032,7 +1035,7 @@ body[data-focus="1"] .transport {
     flex-direction: column;
   }
   .rail .rail-body {
-    padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
   }
   .app[data-drawer="albums"] .albums { transform: translateX(0); }
   .app[data-drawer="rail"] .rail { transform: translateX(0); }
