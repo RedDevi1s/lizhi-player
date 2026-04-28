@@ -509,8 +509,10 @@ body::after {
   grid-template-columns: 300px 1fr 300px;
   align-items: center;
   padding: 0 28px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   gap: 24px;
   position: relative;
+  z-index: 40;
 }
 .transport::before {
   content: "";
@@ -903,7 +905,7 @@ body[data-focus="1"] .transport {
 
   .app {
     grid-template-columns: 1fr;
-    grid-template-rows: 56px 1fr 132px;
+    grid-template-rows: calc(56px + env(safe-area-inset-top, 0px)) 1fr calc(132px + env(safe-area-inset-bottom, 0px));
     height: 100dvh;
     height: 100vh;
   }
@@ -913,7 +915,7 @@ body[data-focus="1"] .transport {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 10px;
+    padding: env(safe-area-inset-top, 0px) 10px 0;
     background: var(--paper);
     border-bottom: 1px solid var(--ink);
     z-index: 20;
@@ -1004,8 +1006,8 @@ body[data-focus="1"] .transport {
   .albums,
   .rail {
     position: fixed;
-    top: 56px;
-    bottom: 132px;
+    top: calc(56px + env(safe-area-inset-top, 0px));
+    bottom: 0;
     width: min(86vw, 360px);
     z-index: 30;
     background: var(--paper);
@@ -1018,7 +1020,7 @@ body[data-focus="1"] .transport {
     left: 0;
     transform: translateX(-105%);
     border-right: 1px solid var(--ink);
-    padding: 20px 18px;
+    padding: 20px 18px calc(132px + env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -1029,13 +1031,18 @@ body[data-focus="1"] .transport {
     display: flex;
     flex-direction: column;
   }
+  .rail .rail-body {
+    padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px));
+  }
   .app[data-drawer="albums"] .albums { transform: translateX(0); }
   .app[data-drawer="rail"] .rail { transform: translateX(0); }
 
   .mobile-backdrop {
     display: block;
     position: fixed;
-    top: 56px; bottom: 132px; left: 0; right: 0;
+    top: calc(56px + env(safe-area-inset-top, 0px));
+    bottom: 0;
+    left: 0; right: 0;
     background: rgba(15, 13, 11, 0.45);
     z-index: 25;
     animation: fadeIn 200ms ease;
@@ -1055,7 +1062,7 @@ body[data-focus="1"] .transport {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto;
     gap: 6px;
-    padding: 10px 14px 14px;
+    padding: 10px 14px calc(14px + env(safe-area-inset-bottom, 0px));
     align-items: stretch;
   }
   .t-now {
@@ -1092,7 +1099,7 @@ body[data-focus="1"] .transport {
   .t-right { display: none; } /* volume + focus hidden on mobile */
 
   /* toast */
-  .toast { bottom: 152px; font-size: 10px; padding: 8px 14px; }
+  .toast { bottom: calc(152px + env(safe-area-inset-bottom, 0px)); font-size: 10px; padding: 8px 14px; }
 
   /* Focus mode on mobile: keep drawers hidden */
   body[data-focus="1"] .mobile-topbar { display: flex; }
