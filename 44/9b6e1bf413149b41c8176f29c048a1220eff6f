@@ -1,0 +1,27 @@
+index.html
+  03878bad93518921 17-19
+sw.js
+  03878bad93518921 4,18-21
+manifest.webmanifest
+  03878bad93518921 16-24,28-34,37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "449b6e1bf413149b41c8176f29c048a1220eff6f",
+  "prompts": {
+    "03878bad93518921": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1f975bce-0733-400f-8a7c-0d8c9a3a560e",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "huanghongwei",
+      "messages": [],
+      "total_additions": 341,
+      "total_deletions": 7,
+      "accepted_lines": 341,
+      "overriden_lines": 0
+    }
+  }
+}
