@@ -1,0 +1,27 @@
+sw.js
+  03878bad93518921 4
+icons/icon.svg
+  03878bad93518921 3-7
+styles/player.css
+  03878bad93518921 512,515,908,918,1009-1010,1023,1034-1036,1043-1045,1065,1102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "4a9ad50a56fd1149537cefa4d4db390854ccb0d3",
+  "prompts": {
+    "03878bad93518921": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1f975bce-0733-400f-8a7c-0d8c9a3a560e",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "huanghongwei",
+      "messages": [],
+      "total_additions": 203,
+      "total_deletions": 249,
+      "accepted_lines": 192,
+      "overriden_lines": 0
+    }
+  }
+}
