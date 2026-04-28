@@ -1,7 +1,7 @@
 // 李志档案 — service worker
 // 策略：壳走 cache-first（同源资源）、CDN/封面/字体走 stale-while-revalidate、音频不缓存。
 
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL_CACHE = `lizhi-shell-${VERSION}`;
 const RUNTIME_CACHE = `lizhi-runtime-${VERSION}`;
 
@@ -15,6 +15,10 @@ const SHELL = [
   "./icons/icon.svg",
   "./icons/icon-maskable.svg",
   "./icons/icon-monochrome.svg",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./icons/icon-maskable-512.png",
+  "./icons/apple-touch-icon.png",
 ];
 
 const AUDIO_RE = /\.(mp3|flac|wav|m4a|ogg|aac)(\?|$)/i;
