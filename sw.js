@@ -1,7 +1,7 @@
 // 李志档案 — service worker
 // 策略：壳走 cache-first（同源资源）、CDN/封面/字体走 stale-while-revalidate、音频不缓存。
 
-const VERSION = "v3";
+const VERSION = "v4";
 const SHELL_CACHE = `lizhi-shell-${VERSION}`;
 const RUNTIME_CACHE = `lizhi-runtime-${VERSION}`;
 
