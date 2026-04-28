@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#f2ede4"/>
+  <rect x="16" y="16" width="480" height="480" fill="none" stroke="#0f0d0b" stroke-width="3"/>
+  <g transform="translate(256 296)">
+    <circle r="160" fill="#0f0d0b"/>
+    <circle r="160" fill="none" stroke="#0f0d0b" stroke-width="2"/>
+    <circle r="130" fill="none" stroke="#3a3530" stroke-width="1" opacity="0.6"/>
+    <circle r="100" fill="none" stroke="#3a3530" stroke-width="1" opacity="0.6"/>
+    <circle r="70" fill="none" stroke="#3a3530" stroke-width="1" opacity="0.6"/>
+    <circle r="22" fill="#b8732a"/>
+    <circle r="6" fill="#0f0d0b"/>
+  </g>
+  <text x="256" y="120" text-anchor="middle" font-family="'Songti SC','STSong','SimSun',serif" font-weight="900" font-size="78" fill="#0f0d0b" letter-spacing="32">李 志</text>
+  <text x="256" y="478" text-anchor="middle" font-family="'JetBrains Mono','Menlo',monospace" font-size="14" fill="#0f0d0b" letter-spacing="6">LI · ZHI · ARCHIVE</text>
+</svg>

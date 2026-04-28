@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>李志 · 档案 LI ZHI ARCHIVE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="李志全档案 — samizdat 风格音乐播放器">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f2ede4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f0d0b" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="李志档案">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="apple-touch-icon" href="icons/icon.svg">
+<link rel="mask-icon" href="icons/icon-monochrome.svg" color="#0f0d0b">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/player.css">
+</head>
+<body data-theme="paper" data-focus="0">
+
+<template id="__bundler_thumbnail" data-bg-color="#f2ede4">
+<svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="800" fill="#f2ede4"/>
+  <g transform="translate(600 400)">
+    <circle r="180" fill="none" stroke="#1a1713" stroke-width="6"/>
+    <circle r="140" fill="none" stroke="#1a1713" stroke-width="2"/>
+    <circle r="100" fill="none" stroke="#1a1713" stroke-width="2"/>
+    <circle r="22" fill="#c98a3a"/>
+    <circle r="6" fill="#1a1713"/>
+  </g>
+  <text x="600" y="180" text-anchor="middle" font-family="serif" font-weight="900" font-size="96" fill="#1a1713" letter-spacing="40">李 志</text>
+  <text x="600" y="680" text-anchor="middle" font-family="monospace" font-size="24" fill="#1a1713" letter-spacing="12">LI · ZHI · ARCHIVE</text>
+</svg>
+</template>
+
+<div id="root"></div>
+
+<script src="data/songs.js"></script>
+<script>
+// Build albums structure from raw song list at runtime.
+// Album metadata: year + tag (studio / live / split / misc).
+const ALBUM_META = {
+  "被禁忌的游戏":            { year: 2004, tag: "STUDIO · 录音室" },
+  "梵高先生":                { year: 2005, tag: "STUDIO · 录音室" },
+  "这个世界会好吗":          { year: 2007, tag: "STUDIO · 录音室" },
+  "我爱南京":                { year: 2009, tag: "LIVE · 现场" },
+  "二零零九年十月十六日事件": { year: 2009, tag: "LIVE · 现场" },
+  "工体东路没有人":          { year: 2010, tag: "LIVE · 现场" },
+  "我们也爱南京":            { year: 2010, tag: "LIVE · 现场" },
+  "在每一条伤心的应天大街上": { year: 2010, tag: "STUDIO · 录音室" },
+  "你好,郑州":               { year: 2011, tag: "LIVE · 现场" },
+  "你好郑州":                { year: 2011, tag: "LIVE · 现场" },
+  "Imagine-2011":           { year: 2011, tag: "LIVE · 现场" },
+  "F":                      { year: 2012, tag: "STUDIO · 录音室" },
+  "108个关键词":             { year: 2012, tag: "LIVE · 现场" },
+  "1701":                   { year: 2013, tag: "LIVE · 现场" },
+  "勾三搭四":                { year: 2014, tag: "UNPLUGGED · 不插电" },
+  "io":                     { year: 2014, tag: "LIVE · 现场" },
+  "看见":                    { year: 2014, tag: "COMP · 合辑" },
+  "动静":                    { year: 2015, tag: "STUDIO · 录音室" },
+  "广场合集":                { year: 2015, tag: "COMP · 合辑" },
+  "家":                      { year: 2016, tag: "STUDIO · 录音室" },
+  "8":                      { year: 2016, tag: "CHILDREN · 儿歌" },
+  "电声与管弦乐":            { year: 2017, tag: "ORCHESTRAL · 管弦" },
+  "电声与管弦乐II":           { year: 2017, tag: "LIVE · 现场" },
+  "北京不插电":              { year: 2018, tag: "UNPLUGGED · 不插电" },
+};
+
+(function buildAlbums() {
+  const groups = new Map();
+  for (const s of window.__LIZHI_RAW) {
+    // strip "专辑-" prefix from artist field; that's the album key
+    const key = (s.artist || "零碎").replace(/^专辑-/, "");
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push({ name: s.name, url: s.url, cover: s.cover });
+  }
+  const albums = [];
+  for (const [name, tracks] of groups) {
+    const meta = ALBUM_META[name] || { year: "—", tag: "MISC · 零碎" };
+    albums.push({
+      name,
+      year: meta.year,
+      tag: meta.tag,
+      cover: tracks[0]?.cover || "",
+      tracks: tracks.map(t => ({ ...t, cover: t.cover || tracks[0]?.cover })),
+    });
+  }
+  // sort by year then name; unknowns last
+  albums.sort((a, b) => {
+    const ay = typeof a.year === "number" ? a.year : 9999;
+    const by = typeof b.year === "number" ? b.year : 9999;
+    if (ay !== by) return ay - by;
+    return a.name.localeCompare(b.name, "zh");
+  });
+  window.__LIZHI_ALBUMS = albums;
+})();
+</script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="app.jsx"></script>
+
+<script>
+// PWA: register service worker for offline shell + cover/font caching.
+// 仅在 https 或 localhost 下生效（浏览器限制）。
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js", { scope: "./" }).catch((err) => {
+      console.warn("[pwa] sw register failed:", err);
+    });
+  });
+}
+</script>
+</body>
+</html>
