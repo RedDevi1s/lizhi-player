@@ -1,0 +1,22 @@
+app.jsx
+  s_26f218614188f1::t_9a216cddfc0429 57-62
+  s_26f218614188f1::t_0c3c96024c7b11 360-363,365-366,369,371,381,383,390,395,398,405-406,415
+  s_26f218614188f1::t_faa8962572420b 588-589
+  s_26f218614188f1::t_2bf0d7910bf014 621-623
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "3c6bcdb6897cc1e7bcd08d3b1172a55918e9bda5",
+  "prompts": {},
+  "sessions": {
+    "s_26f218614188f1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fd861292-cb9c-4473-9d0e-bcc15f59978e",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "huanghongwei <huanghongwei@xiaohongshu.com>"
+    }
+  }
+}
