@@ -183,6 +183,14 @@ function App() {
   const [storage, setStorage] = useState({ usage: 0, quota: 0 });
   const downloadAbortRef = useRef(new Map()); // url -> AbortController
 
+  // known track durations (sec), keyed by normalized URL — persisted so a refresh
+  // doesn't reset everything we already learned.
+  const [durations, setDurations] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("lizhi-durations") || "{}"); }
+    catch { return {}; }
+  });
+  const probeRef = useRef({ pending: [], active: 0, seen: new Set() });
+
   // service-worker update banner
   const [updateReady, setUpdateReady] = useState(false);
   const [appVersion, setAppVersion] = useState(null);
@@ -283,7 +291,11 @@ function App() {
     const b = e.target.buffered;
     if (b.length) setBuffered(b.end(b.length - 1));
   };
-  const onMeta = (e) => { setDuration(e.target.duration); setLoading(false); };
+  const onMeta = (e) => {
+    const d = e.target.duration;
+    setDuration(d); setLoading(false);
+    if (track) recordDuration(normUrl(track.url), d);
+  };
   const onEnded = () => nextTrack();
   const onWait = () => setLoading(true);
   const onCanPlay = () => setLoading(false);
@@ -313,12 +325,64 @@ function App() {
     }
   }, []);
 
+  const recordDuration = useCallback((key, d) => {
+    if (!isFinite(d) || d <= 0) return;
+    setDurations(prev => {
+      if (prev[key] === d) return prev;
+      const next = { ...prev, [key]: d };
+      try { localStorage.setItem("lizhi-durations", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  // Concurrency-limited probe queue: spin up at most 3 throwaway <audio> elements
+  // with preload=metadata to read duration without playing the file.
+  const pumpProbe = useCallback(() => {
+    const q = probeRef.current;
+    while (q.active < 3 && q.pending.length) {
+      const item = q.pending.shift();
+      q.active++;
+      const a = new Audio();
+      a.preload = "metadata";
+      const finish = () => {
+        a.removeEventListener("loadedmetadata", onMeta);
+        a.removeEventListener("error", onErr);
+        try { a.src = ""; } catch {}
+        q.active--;
+        setTimeout(() => pumpProbe(), 0);
+      };
+      const onMeta = () => { recordDuration(item.key, a.duration); finish(); };
+      const onErr = () => finish();
+      a.addEventListener("loadedmetadata", onMeta);
+      a.addEventListener("error", onErr);
+      a.src = item.url;
+    }
+  }, [recordDuration]);
+
+  const probeDuration = useCallback((url) => {
+    const key = normUrl(url);
+    const q = probeRef.current;
+    if (q.seen.has(key)) return;
+    q.seen.add(key);
+    q.pending.push({ url, key });
+    pumpProbe();
+  }, [pumpProbe]);
+
   useEffect(() => {
     refreshCache();
     const onFocus = () => refreshCache();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [refreshCache]);
+
+  // Once cache set is known, schedule duration probes for everything that's
+  // cached but not yet measured. Cheap because SW serves these from the cache.
+  useEffect(() => {
+    if (!cachedUrls.size) return;
+    cachedUrls.forEach((u) => {
+      if (durations[u] == null) probeDuration(u);
+    });
+  }, [cachedUrls, durations, probeDuration]);
 
   // service-worker update detection + version query
   useEffect(() => {
@@ -430,6 +494,23 @@ function App() {
       if (downloadAbortRef.current.has(normUrl(t.url))) cancelDownload(t.url);
     }
   }, [cancelDownload]);
+
+  const downloadAll = useCallback(async () => {
+    const remaining = ALL_TRACKS.filter(t => !cachedUrls.has(normUrl(t.url))).length;
+    if (!remaining) return;
+    if (!window.confirm(`即将下载 ${remaining} 首曲目到本地，可能占用数 GB 存储且耗时较长。继续？`)) return;
+    for (const t of ALL_TRACKS) {
+      const key = normUrl(t.url);
+      if (!cachedUrls.has(key) && !downloadAbortRef.current.has(key)) {
+        // eslint-disable-next-line no-await-in-loop
+        await startDownload(t.url);
+      }
+    }
+  }, [cachedUrls, startDownload]);
+
+  const cancelAll = useCallback(() => {
+    for (const ctrl of downloadAbortRef.current.values()) ctrl.abort();
+  }, []);
 
   const clearAllCache = useCallback(async () => {
     if (!window.confirm("确认清空所有已下载的歌曲？")) return;
@@ -570,6 +651,25 @@ function App() {
             {searchResults ? `${searchResults.length} 首` : `${totalAlbums} 张 · ${totalTracks} 首`}
           </div>
         </div>
+        {!searchResults && cacheSupported && (() => {
+          const cachedN = ALL_TRACKS.filter(t => cachedUrls.has(normUrl(t.url))).length;
+          const busy = Object.keys(downloads).length > 0;
+          const allDone = cachedN === totalTracks;
+          return (
+            <button
+              className={"all-dl-btn mono" + (allDone ? " done" : "") + (busy ? " busy" : "")}
+              onClick={() => busy ? cancelAll() : downloadAll()}
+              disabled={allDone}
+              title={allDone ? "整个曲库都已离线" : (busy ? "点击取消所有进行中的下载" : "下载全部曲目到本地")}
+            >
+              {allDone
+                ? <>已 全 部 离 线 · <span className="mono">{totalTracks}</span> 首</>
+                : busy
+                ? <>下 载 中 · <span className="mono">{cachedN} / {totalTracks}</span> · 点 击 取 消</>
+                : <>一 键 下 载 全 部 · <span className="mono">{totalTracks - cachedN}</span> 首 剩 余</>}
+            </button>
+          );
+        })()}
         <label className="search-box">
           <span className="search-ico"><I.search/></span>
           <input
@@ -704,7 +804,7 @@ function App() {
                 <div className="name">{t.name}</div>
                 <div className="src mono">{t.url.match(/\.(flac|mp3)$/i)?.[1]?.toUpperCase() || "MP3"}</div>
                 <div className="dur mono">
-                  {isCur && duration ? fmt(duration) : "—:—"}
+                  {fmt(isCur && duration ? duration : durations[tKey])}
                 </div>
                 {cacheSupported ? (
                   <button

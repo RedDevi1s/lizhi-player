@@ -2,7 +2,7 @@
 // 策略：壳走 cache-first（同源资源）、CDN/封面/字体走 stale-while-revalidate、
 // 音频走"已下载 → cache-first（带 Range 切片）"，未下载则放行让浏览器流式播放。
 
-const VERSION = "v9";
+const VERSION = "v10";
 const SHELL_CACHE = `lizhi-shell-${VERSION}`;
 const RUNTIME_CACHE = `lizhi-runtime-${VERSION}`;
 // 音频缓存名不带 VERSION：壳升级时不丢用户已下载的歌
