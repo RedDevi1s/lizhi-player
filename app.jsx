@@ -44,7 +44,76 @@ const I = {
   mute: () => <svg viewBox="0 0 24 24" fill="currentColor" style={{width:16,height:16}}><path d="M7 9v6h4l5 5V4l-5 5H7zm13.59 3L23 9.41 21.59 8 19 10.59 16.41 8 15 9.41 17.59 12 15 14.59 16.41 16 19 13.41 21.59 16 23 14.59 20.59 12z"/></svg>,
   list: () => <svg viewBox="0 0 24 24" fill="currentColor" style={{width:16,height:16}}><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg>,
   search: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{width:16,height:16}}><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.5-4.5"/></svg>,
-  x: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{width:14,height:14}}><path d="M6 6l12 12M18 6L6 18"/></svg>
+  x: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{width:14,height:14}}><path d="M6 6l12 12M18 6L6 18"/></svg>,
+  cloud: (s={}) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{width:s.size||14,height:s.size||14}}><path d="M7 18a4 4 0 010-8 5.5 5.5 0 0110.6 1.2A3.5 3.5 0 0117 18H7z"/><path d="M12 11v6m0 0l-2.5-2.5M12 17l2.5-2.5" strokeLinecap="round"/></svg>,
+  check: (s={}) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" style={{width:s.size||14,height:s.size||14}}><path d="M5 12l5 5 9-11" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  trash: (s={}) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{width:s.size||14,height:s.size||14}}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" strokeLinecap="round"/></svg>
+};
+
+// ---- offline cache helpers
+const AUDIO_CACHE_NAME = "lizhi-audio-v1";
+const cacheSupported = typeof caches !== "undefined";
+
+async function listCachedUrls() {
+  if (!cacheSupported) return new Set();
+  try {
+    const cache = await caches.open(AUDIO_CACHE_NAME);
+    const keys = await cache.keys();
+    return new Set(keys.map(r => r.url));
+  } catch { return new Set(); }
+}
+
+async function deleteCachedUrl(url) {
+  if (!cacheSupported) return false;
+  const cache = await caches.open(AUDIO_CACHE_NAME);
+  return cache.delete(url);
+}
+
+async function clearAudioCache() {
+  if (!cacheSupported) return;
+  await caches.delete(AUDIO_CACHE_NAME);
+}
+
+// Streams a remote audio file into the cache, reporting progress 0..1.
+async function downloadToCache(url, onProgress, signal) {
+  if (!cacheSupported) throw new Error("当前浏览器不支持离线缓存");
+  const cache = await caches.open(AUDIO_CACHE_NAME);
+  if (await cache.match(url)) return; // already there
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const total = parseInt(res.headers.get("Content-Length") || "0", 10);
+  const reader = res.body?.getReader();
+  if (!reader) {
+    await cache.put(url, res.clone());
+    onProgress?.(1);
+    return;
+  }
+  const chunks = [];
+  let received = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    if (total) onProgress?.(received / total);
+  }
+  const blob = new Blob(chunks);
+  // Rebuild a 200 OK Response — SW will slice it for Range requests on playback
+  const headers = new Headers();
+  const ct = res.headers.get("Content-Type");
+  if (ct) headers.set("Content-Type", ct);
+  headers.set("Content-Length", String(blob.size));
+  headers.set("Accept-Ranges", "bytes");
+  await cache.put(url, new Response(blob, { status: 200, headers }));
+  onProgress?.(1);
+}
+
+const fmtBytes = (n) => {
+  if (!n || !isFinite(n)) return "0 B";
+  const u = ["B","KB","MB","GB"];
+  let i = 0; let x = n;
+  while (x >= 1024 && i < u.length - 1) { x /= 1024; i++; }
+  return `${x.toFixed(i === 0 ? 0 : 1)} ${u[i]}`;
 };
 
 // ---- helpers
@@ -101,6 +170,12 @@ function App() {
   const [mobileDrawer, setMobileDrawer] = useState(null); // null | "albums" | "rail"
   const [search, setSearch] = useState("");
   const searchRef = useRef(null);
+
+  // offline cache state
+  const [cachedUrls, setCachedUrls] = useState(() => new Set());
+  const [downloads, setDownloads] = useState({}); // url -> 0..1 progress (in-flight only)
+  const [storage, setStorage] = useState({ usage: 0, quota: 0 });
+  const downloadAbortRef = useRef(new Map()); // url -> AbortController
 
   const audioRef = useRef(null);
 
@@ -215,6 +290,91 @@ function App() {
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     setVolume(pct); setMuted(false);
   };
+
+  // ---- offline cache: scan on mount + when window regains focus
+  const refreshCache = useCallback(async () => {
+    setCachedUrls(await listCachedUrls());
+    if (navigator.storage?.estimate) {
+      try {
+        const est = await navigator.storage.estimate();
+        setStorage({ usage: est.usage || 0, quota: est.quota || 0 });
+      } catch {}
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshCache();
+    const onFocus = () => refreshCache();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [refreshCache]);
+
+  const startDownload = useCallback(async (url) => {
+    if (!url || cachedUrls.has(url)) return;
+    if (downloadAbortRef.current.has(url)) return; // already in flight
+    const ctrl = new AbortController();
+    downloadAbortRef.current.set(url, ctrl);
+    setDownloads(d => ({ ...d, [url]: 0 }));
+    try {
+      await downloadToCache(url, (p) => {
+        setDownloads(d => ({ ...d, [url]: p }));
+      }, ctrl.signal);
+      setCachedUrls(prev => new Set(prev).add(url));
+      if (navigator.storage?.estimate) {
+        try {
+          const est = await navigator.storage.estimate();
+          setStorage({ usage: est.usage || 0, quota: est.quota || 0 });
+        } catch {}
+      }
+    } catch (e) {
+      if (e?.name !== "AbortError") setError("下载失败：" + (e?.message || e));
+    } finally {
+      downloadAbortRef.current.delete(url);
+      setDownloads(d => {
+        const { [url]: _, ...rest } = d;
+        return rest;
+      });
+    }
+  }, [cachedUrls]);
+
+  const cancelDownload = useCallback((url) => {
+    const ctrl = downloadAbortRef.current.get(url);
+    if (ctrl) ctrl.abort();
+  }, []);
+
+  const removeDownload = useCallback(async (url) => {
+    await deleteCachedUrl(url);
+    setCachedUrls(prev => {
+      const n = new Set(prev); n.delete(url); return n;
+    });
+    refreshCache();
+  }, [refreshCache]);
+
+  const downloadAlbum = useCallback(async (alb) => {
+    for (const t of alb.tracks) {
+      if (!cachedUrls.has(t.url) && !downloadAbortRef.current.has(t.url)) {
+        // eslint-disable-next-line no-await-in-loop
+        await startDownload(t.url);
+      }
+    }
+  }, [cachedUrls, startDownload]);
+
+  const cancelAlbum = useCallback((alb) => {
+    for (const t of alb.tracks) {
+      if (downloadAbortRef.current.has(t.url)) cancelDownload(t.url);
+    }
+  }, [cancelDownload]);
+
+  const clearAllCache = useCallback(async () => {
+    if (!window.confirm("确认清空所有已下载的歌曲？")) return;
+    // cancel in-flight
+    for (const ctrl of downloadAbortRef.current.values()) ctrl.abort();
+    downloadAbortRef.current.clear();
+    await clearAudioCache();
+    setCachedUrls(new Set());
+    setDownloads({});
+    refreshCache();
+  }, [refreshCache]);
 
   // keyboard shortcuts
   useEffect(() => {
@@ -372,6 +532,28 @@ function App() {
               <span className="mono">{album.tracks.length} TRACKS</span>
             </div>
             <div className="blurb">{ALBUM_BLURBS[album.name] || "李志的唱片。"}</div>
+            {cacheSupported && (() => {
+              const total = album.tracks.length;
+              const cachedN = album.tracks.filter(t => cachedUrls.has(t.url)).length;
+              const dlN = album.tracks.filter(t => downloads[t.url] != null).length;
+              const allDone = cachedN === total;
+              return (
+                <div className="album-actions">
+                  <button
+                    className={"album-dl-btn" + (allDone ? " done" : "") + (dlN ? " busy" : "")}
+                    onClick={() => dlN ? cancelAlbum(album) : downloadAlbum(album)}
+                    disabled={allDone}
+                    title={allDone ? "已全部下载" : (dlN ? "点击取消" : "下载整张专辑到本地")}
+                  >
+                    {allDone ? <I.check size={14}/> : <I.cloud size={14}/>}
+                    <span className="mono">
+                      {allDone ? "已 下 载" : dlN ? `下 载 中 ${cachedN}/${total} · 点 击 取 消` : `下 载 专 辑 · ${total - cachedN} 首`}
+                    </span>
+                  </button>
+                  <span className="album-dl-meta mono">{cachedN} / {total} 已 缓 存</span>
+                </div>
+              );
+            })()}
           </div>
         </header>
 
@@ -385,6 +567,9 @@ function App() {
           </div>
           {album.tracks.map((t, i) => {
             const isCur = queueAlbumIdx === selectedAlbumIdx && queueIdx === i;
+            const dlP = downloads[t.url];
+            const isCached = cachedUrls.has(t.url);
+            const isDl = dlP != null;
             return (
               <div
                 key={i}
@@ -398,12 +583,34 @@ function App() {
                     String(i+1).padStart(2,"0")
                   )}
                 </div>
-                <div className="name">{t.name}</div>
+                <div className="name">
+                  {t.name}
+                  {isCached && <span className="track-offline-dot" title="已离线缓存" />}
+                </div>
                 <div className="src mono">{t.url.match(/\.(flac|mp3)$/i)?.[1]?.toUpperCase() || "MP3"}</div>
                 <div className="dur mono">
                   {isCur && duration ? fmt(duration) : "—:—"}
                 </div>
-                <div className="play-icon"><I.play size={14}/></div>
+                {cacheSupported ? (
+                  <button
+                    className={"track-cache-btn" + (isCached ? " cached" : "") + (isDl ? " busy" : "")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isDl) cancelDownload(t.url);
+                      else if (isCached) removeDownload(t.url);
+                      else startDownload(t.url);
+                    }}
+                    title={isCached ? "已下载 · 点击删除" : isDl ? "下载中 · 点击取消" : "下载到本地"}
+                  >
+                    {isDl ? (
+                      <span className="cache-prog" style={{"--p": (dlP * 100).toFixed(0) + "%"}}>
+                        <span className="cache-prog-n mono">{Math.floor(dlP * 100)}</span>
+                      </span>
+                    ) : isCached ? <I.check size={14}/> : <I.cloud size={14}/>}
+                  </button>
+                ) : (
+                  <div className="play-icon"><I.play size={14}/></div>
+                )}
               </div>
             );
           })}
@@ -451,6 +658,36 @@ function App() {
                 <div className="stat"><div className="k mono">专辑</div><div className="v mono">{totalAlbums}</div></div>
                 <div className="stat"><div className="k mono">单曲</div><div className="v mono">{totalTracks}</div></div>
               </div>
+              {cacheSupported && (
+                <>
+                  <h3>离 线 缓 存</h3>
+                  <div className="stat-grid">
+                    <div className="stat">
+                      <div className="k mono">已 缓 存</div>
+                      <div className="v mono">{cachedUrls.size}</div>
+                    </div>
+                    <div className="stat">
+                      <div className="k mono">已 用</div>
+                      <div className="v mono" style={{fontSize:14}}>{fmtBytes(storage.usage)}</div>
+                    </div>
+                  </div>
+                  {storage.quota > 0 && (
+                    <div className="quota-bar" title={`${fmtBytes(storage.usage)} / ${fmtBytes(storage.quota)}`}>
+                      <div className="quota-fill" style={{width: Math.min(100, (storage.usage / storage.quota) * 100) + "%"}} />
+                    </div>
+                  )}
+                  <p style={{fontSize:11,color:"var(--ink-3)",lineHeight:1.6,marginTop:6}}>
+                    点 击 曲 目 右 侧 的 云 图 标 单 独 下 载，或 在 专 辑 页 一 键 下 载 整 张。已 缓 存 的 曲 目 可 离 线 播 放。
+                  </p>
+                  <button
+                    className="cache-clear-btn mono"
+                    onClick={clearAllCache}
+                    disabled={cachedUrls.size === 0}
+                  >
+                    <I.trash size={12}/> <span>全 部 清 空</span>
+                  </button>
+                </>
+              )}
               <h3>键 盘</h3>
               <p style={{fontFamily:"JetBrains Mono, monospace",fontSize:11,lineHeight:1.8}}>
                 Space — 播放 / 暂停<br/>

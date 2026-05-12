@@ -375,6 +375,185 @@ body::after {
 }
 .track:hover .play-icon { opacity: 1; }
 
+/* Offline-cache button at tail of each track row */
+.track-cache-btn {
+  background: transparent;
+  border: 1px solid rgba(26,23,19,0.25);
+  color: var(--ink-3);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0;
+  transition: background 120ms, color 120ms, border-color 120ms;
+  justify-self: end;
+}
+.track-cache-btn:hover {
+  background: var(--paper-3);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.track-cache-btn.cached {
+  color: var(--amber-deep);
+  border-color: var(--amber-deep);
+}
+.track-cache-btn.cached:hover {
+  background: var(--blood);
+  border-color: var(--blood);
+  color: var(--paper);
+}
+.track-cache-btn.busy {
+  border-color: var(--amber);
+  color: var(--amber-deep);
+  background: var(--paper);
+}
+.track.playing .track-cache-btn {
+  border-color: rgba(242,237,228,0.4);
+  color: var(--paper-2);
+}
+.track.playing .track-cache-btn.cached {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.track.playing .track-cache-btn:hover {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--paper);
+}
+
+/* Conic progress ring drawn via CSS gradients */
+.cache-prog {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background:
+    conic-gradient(var(--amber) var(--p, 0%), rgba(26,23,19,0.15) 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.cache-prog::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  background: var(--paper);
+  border-radius: 50%;
+}
+.track.playing .cache-prog::before { background: var(--ink); }
+.cache-prog-n {
+  position: relative;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--ink);
+  z-index: 1;
+}
+.track.playing .cache-prog-n { color: var(--paper); }
+
+/* Tiny amber dot next to a track name when it has been cached */
+.track-offline-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+  vertical-align: middle;
+  box-shadow: 0 0 0 1px var(--paper);
+  position: relative;
+  top: -1px;
+}
+.track.playing .track-offline-dot { box-shadow: 0 0 0 1px var(--ink); }
+
+/* Album-level download button on the stage header */
+.album-actions {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.album-dl-btn {
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  color: var(--ink);
+  padding: 8px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+.album-dl-btn:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--paper);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--amber-deep);
+}
+.album-dl-btn.busy {
+  background: var(--amber);
+  border-color: var(--amber-deep);
+  box-shadow: 3px 3px 0 var(--amber-deep);
+}
+.album-dl-btn.done {
+  background: var(--ink);
+  color: var(--amber);
+  cursor: default;
+  box-shadow: 3px 3px 0 var(--amber-deep);
+}
+.album-dl-btn:disabled { opacity: 0.9; }
+.album-dl-meta {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+
+/* Storage quota bar in the notes panel */
+.quota-bar {
+  height: 4px;
+  background: var(--paper-3);
+  border: 1px solid var(--ink-3);
+  margin-top: 8px;
+  position: relative;
+}
+.quota-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--amber);
+}
+.cache-clear-btn {
+  margin-top: 14px;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  padding: 7px 12px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 120ms, color 120ms;
+}
+.cache-clear-btn:hover:not(:disabled) {
+  background: var(--blood);
+  border-color: var(--blood);
+  color: var(--paper);
+}
+.cache-clear-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* Right column - queue + lyrics-column */
 .rail {
   grid-row: 1;
@@ -999,6 +1178,11 @@ body[data-focus="1"] .transport {
   .tl-head > :nth-child(4) { grid-column: 3; }
   .tl-head > :last-child { display: none; }
   .track .play-icon { display: none; }
+  .track-cache-btn { width: 40px; height: 40px; }
+  .cache-prog { width: 26px; height: 26px; }
+  .cache-prog-n { font-size: 9px; }
+  .album-dl-btn { padding: 10px 14px; font-size: 10px; }
+  .album-actions { width: 100%; }
   .track { padding: 12px 0; min-height: 48px; }
   .track:hover { padding-left: 0; background: transparent; }
   .track:active { background: var(--paper-2); }
