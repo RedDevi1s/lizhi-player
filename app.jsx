@@ -177,6 +177,10 @@ function App() {
   const [storage, setStorage] = useState({ usage: 0, quota: 0 });
   const downloadAbortRef = useRef(new Map()); // url -> AbortController
 
+  // service-worker update banner
+  const [updateReady, setUpdateReady] = useState(false);
+  const swRegRef = useRef(null);
+
   const audioRef = useRef(null);
 
   const track = queueAlbum.tracks[queueIdx];
@@ -308,6 +312,43 @@ function App() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [refreshCache]);
+
+  // service-worker update detection
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    let cancelled = false;
+    const watch = (nw) => {
+      if (!nw) return;
+      nw.addEventListener("statechange", () => {
+        // new SW finished installing while a controller already exists → it's an update, not first install
+        if (nw.state === "installed" && navigator.serviceWorker.controller && !cancelled) {
+          setUpdateReady(true);
+        }
+      });
+    };
+    navigator.serviceWorker.getRegistration().then((reg) => {
+      if (!reg || cancelled) return;
+      swRegRef.current = reg;
+      if (reg.waiting && navigator.serviceWorker.controller) setUpdateReady(true);
+      if (reg.installing) watch(reg.installing);
+      reg.addEventListener("updatefound", () => watch(reg.installing));
+      // proactive poll: re-check on focus + every 30 min
+      const tick = () => reg.update().catch(() => {});
+      const onFocus = () => tick();
+      window.addEventListener("focus", onFocus);
+      const id = setInterval(tick, 30 * 60 * 1000);
+      return () => { window.removeEventListener("focus", onFocus); clearInterval(id); };
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const applyUpdate = useCallback(() => {
+    // sw.js already calls skipWaiting() in install, so a fresh SW shouldn't sit in waiting;
+    // but if one does (e.g. older deploy), nudge it before reload.
+    const reg = swRegRef.current;
+    if (reg?.waiting) reg.waiting.postMessage("SKIP_WAITING");
+    window.location.reload();
+  }, []);
 
   const startDownload = useCallback(async (url) => {
     if (!url || cachedUrls.has(url)) return;
@@ -770,6 +811,18 @@ function App() {
       </footer>
 
       {error && <div className="toast">{error}</div>}
+
+      {updateReady && (
+        <div className="update-banner" role="status">
+          <div className="ub-stamp mono">NEW</div>
+          <div className="ub-body">
+            <div className="ub-title">新 版 本 已 就 绪</div>
+            <div className="ub-sub mono">UPDATE READY · 刷 新 以 应 用</div>
+          </div>
+          <button className="ub-cta mono" onClick={applyUpdate}>刷 新</button>
+          <button className="ub-x" onClick={() => setUpdateReady(false)} title="稍后"><I.x/></button>
+        </div>
+      )}
 
       <audio
         ref={audioRef}

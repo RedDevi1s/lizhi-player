@@ -1343,6 +1343,102 @@ body[data-focus="1"] .transport {
   100% { transform: translateX(100%); }
 }
 
+/* Service-worker update banner — sticky bookmark in bottom-right */
+.update-banner {
+  position: fixed;
+  right: 24px;
+  bottom: 120px;
+  z-index: 60;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  padding: 12px 14px 12px 50px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 260px;
+  max-width: min(360px, calc(100vw - 24px));
+  animation: ubIn 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.update-banner .ub-stamp {
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-12deg);
+  background: var(--blood);
+  color: var(--paper);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  padding: 4px 8px;
+  border: 1px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.update-banner .ub-body {
+  flex: 1;
+  min-width: 0;
+}
+.update-banner .ub-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+}
+.update-banner .ub-sub {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.update-banner .ub-cta {
+  background: var(--ink);
+  color: var(--paper);
+  border: 1px solid var(--ink);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 120ms;
+  flex-shrink: 0;
+}
+.update-banner .ub-cta:hover {
+  background: var(--amber);
+  color: var(--ink);
+  border-color: var(--amber);
+}
+.update-banner .ub-x {
+  background: transparent;
+  border: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.update-banner .ub-x:hover { color: var(--blood); }
+@keyframes ubIn {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@media (max-width: 820px) {
+  .update-banner {
+    right: 12px;
+    left: 12px;
+    bottom: calc(180px + env(safe-area-inset-bottom, 0px));
+    min-width: 0;
+    max-width: none;
+    padding-left: 46px;
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .update-banner .ub-title { font-size: 13px; }
+  .update-banner .ub-cta { padding: 7px 10px; font-size: 10px; }
+}
+
 /* Error toast */
 .toast {
   position: fixed;
