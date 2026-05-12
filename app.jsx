@@ -701,10 +701,7 @@ function App() {
                     String(i+1).padStart(2,"0")
                   )}
                 </div>
-                <div className="name">
-                  {t.name}
-                  {isCached && <span className="track-offline-dot" title="已离线缓存" />}
-                </div>
+                <div className="name">{t.name}</div>
                 <div className="src mono">{t.url.match(/\.(flac|mp3)$/i)?.[1]?.toUpperCase() || "MP3"}</div>
                 <div className="dur mono">
                   {isCur && duration ? fmt(duration) : "—:—"}

@@ -397,16 +397,16 @@ body::after {
   border-color: var(--ink);
   color: var(--ink);
 }
-/* Cached = settled state, so the indicator recedes (the amber dot beside
-   the title already conveys the info). The button still works as a tap
-   target for delete; hover/press reveals the destructive intent. */
+/* Cached state is the sole "已下载" signal: still recedes from the
+   download affordance (no border / background), but legible on its own.
+   Hover/press reveals the destructive intent. */
 .track-cache-btn.cached {
   border-color: transparent;
   background: transparent;
   color: var(--amber-deep);
-  opacity: 0.55;
+  opacity: 0.72;
 }
-.track-cache-btn.cached svg { width: 11px; height: 11px; }
+.track-cache-btn.cached svg { width: 12px; height: 12px; }
 .track-cache-btn.cached:hover {
   opacity: 1;
   background: var(--blood);
@@ -425,7 +425,7 @@ body::after {
 .track.playing .track-cache-btn.cached {
   border-color: transparent;
   color: var(--amber);
-  opacity: 0.75;
+  opacity: 0.85;
 }
 .track.playing .track-cache-btn:hover {
   background: var(--paper);
@@ -460,20 +460,6 @@ body::after {
   z-index: 1;
 }
 .track.playing .cache-prog-n { color: var(--paper); }
-
-/* Tiny amber dot next to a track name when it has been cached */
-.track-offline-dot {
-  display: inline-block;
-  width: 6px; height: 6px;
-  margin-left: 8px;
-  border-radius: 50%;
-  background: var(--amber);
-  vertical-align: middle;
-  box-shadow: 0 0 0 1px var(--paper);
-  position: relative;
-  top: -1px;
-}
-.track.playing .track-offline-dot { box-shadow: 0 0 0 1px var(--ink); }
 
 /* Album-level download button on the stage header */
 .album-actions {
