@@ -1506,6 +1506,138 @@ body[data-focus="1"] .transport {
   .update-banner .ub-cta { padding: 7px 10px; font-size: 10px; }
 }
 
+/* Confirm modal — samizdat replacement for window.confirm */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(15, 13, 11, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: modalBd 180ms ease;
+}
+@keyframes modalBd { from { opacity: 0; } to { opacity: 1; } }
+.modal {
+  position: relative;
+  background: var(--paper);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  box-shadow: 8px 8px 0 var(--ink);
+  padding: 32px 26px 22px;
+  max-width: 440px;
+  width: 100%;
+  animation: modalIn 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes modalIn {
+  from { transform: translateY(20px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+.modal::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid var(--ink-3);
+  pointer-events: none;
+  opacity: 0.35;
+}
+.modal-stamp {
+  position: absolute;
+  top: -14px;
+  left: 18px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  padding: 5px 10px;
+  border: 1px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--amber-deep);
+  transform: rotate(-3deg);
+  z-index: 1;
+}
+.modal-stamp.danger {
+  background: var(--blood);
+  border-color: var(--blood);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.modal-title {
+  margin: 4px 0 14px;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  position: relative;
+  z-index: 1;
+}
+.modal-body {
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--ink-2);
+  margin: 0 0 24px;
+  position: relative;
+  z-index: 1;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+.modal-btn {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: transform 120ms, box-shadow 120ms, background 120ms, color 120ms;
+}
+.modal-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--amber-deep);
+}
+.modal-btn:active {
+  transform: translate(0, 0);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.modal-btn-confirm {
+  background: var(--ink);
+  color: var(--paper);
+}
+.modal-btn-confirm:hover {
+  background: var(--amber);
+  color: var(--ink);
+  border-color: var(--amber);
+}
+.modal-btn-confirm.danger {
+  background: var(--blood);
+  border-color: var(--blood);
+  color: var(--paper);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.modal-btn-confirm.danger:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--blood);
+  box-shadow: 4px 4px 0 var(--blood);
+}
+@media (max-width: 820px) {
+  .modal { padding: 28px 20px 18px; box-shadow: 6px 6px 0 var(--ink); }
+  .modal-title { font-size: 17px; }
+  .modal-body { font-size: 12px; }
+  .modal-btn { padding: 9px 12px; font-size: 10px; letter-spacing: 0.15em; }
+  .modal-actions { gap: 8px; }
+}
+
 /* Error toast */
 .toast {
   position: fixed;

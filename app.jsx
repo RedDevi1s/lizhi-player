@@ -196,6 +196,33 @@ function App() {
   const [appVersion, setAppVersion] = useState(null);
   const swRegRef = useRef(null);
 
+  // confirm modal state (replaces window.confirm everywhere)
+  const [confirmDialog, setConfirmDialog] = useState(null);
+  const askConfirm = useCallback((opts) => {
+    return new Promise((resolve) => {
+      setConfirmDialog({
+        title: opts.title,
+        body: opts.body,
+        confirmLabel: opts.confirmLabel || "确 定",
+        cancelLabel: opts.cancelLabel || "取 消",
+        stamp: opts.stamp || (opts.danger ? "警 告" : "确 认"),
+        danger: !!opts.danger,
+        _resolve: resolve,
+      });
+    });
+  }, []);
+  const resolveConfirm = useCallback((ok) => {
+    setConfirmDialog((c) => {
+      if (c && c._resolve) c._resolve(ok);
+      return null;
+    });
+  }, []);
+
+  // batch-abort flag: set when a download fails with quota-exhausted so
+  // downloadAll / downloadAlbum can break their loops instead of hammering
+  // the cache with hundreds of guaranteed-to-fail puts.
+  const quotaHitRef = useRef(false);
+
   const audioRef = useRef(null);
 
   const track = queueAlbum.tracks[queueIdx];
@@ -455,7 +482,14 @@ function App() {
         } catch {}
       }
     } catch (e) {
-      if (e?.name !== "AbortError") setError("下载失败：" + (e?.message || e));
+      if (e?.name === "AbortError") {
+        // user-cancelled, no toast
+      } else if (e?.name === "QuotaExceededError" || /quota|exceed/i.test(e?.message || "")) {
+        quotaHitRef.current = true;
+        setError("存储空间已满，已停止后续下载");
+      } else {
+        setError("下载失败：" + (e?.message || e));
+      }
     } finally {
       downloadAbortRef.current.delete(key);
       setDownloads(d => {
@@ -480,7 +514,9 @@ function App() {
   }, [refreshCache]);
 
   const downloadAlbum = useCallback(async (alb) => {
+    quotaHitRef.current = false;
     for (const t of alb.tracks) {
+      if (quotaHitRef.current) break;
       const key = normUrl(t.url);
       if (!cachedUrls.has(key) && !downloadAbortRef.current.has(key)) {
         // eslint-disable-next-line no-await-in-loop
@@ -498,22 +534,39 @@ function App() {
   const downloadAll = useCallback(async () => {
     const remaining = ALL_TRACKS.filter(t => !cachedUrls.has(normUrl(t.url))).length;
     if (!remaining) return;
-    if (!window.confirm(`即将下载 ${remaining} 首曲目到本地，可能占用数 GB 存储且耗时较长。继续？`)) return;
+    const ok = await askConfirm({
+      stamp: "全 量 下 载",
+      title: `下载 ${remaining} 首曲目`,
+      body: "整套档案可能占用数 GB 存储，耗时较长，期间可随时点击按钮取消。如果存储空间不足，下载会自动停止。",
+      confirmLabel: "开 始 下 载",
+      cancelLabel: "再 想 想",
+    });
+    if (!ok) return;
+    quotaHitRef.current = false;
     for (const t of ALL_TRACKS) {
+      if (quotaHitRef.current) break;
       const key = normUrl(t.url);
       if (!cachedUrls.has(key) && !downloadAbortRef.current.has(key)) {
         // eslint-disable-next-line no-await-in-loop
         await startDownload(t.url);
       }
     }
-  }, [cachedUrls, startDownload]);
+  }, [cachedUrls, startDownload, askConfirm]);
 
   const cancelAll = useCallback(() => {
     for (const ctrl of downloadAbortRef.current.values()) ctrl.abort();
   }, []);
 
   const clearAllCache = useCallback(async () => {
-    if (!window.confirm("确认清空所有已下载的歌曲？")) return;
+    const ok = await askConfirm({
+      stamp: "清 空 缓 存",
+      title: "清空所有已下载的歌曲",
+      body: "本地缓存的全部曲目会被移除（已记住的时长信息保留）。此操作不可撤销，下次播放需重新从网络拉取。",
+      confirmLabel: "确 认 清 空",
+      cancelLabel: "保 留",
+      danger: true,
+    });
+    if (!ok) return;
     // cancel in-flight
     for (const ctrl of downloadAbortRef.current.values()) ctrl.abort();
     downloadAbortRef.current.clear();
@@ -521,7 +574,7 @@ function App() {
     setCachedUrls(new Set());
     setDownloads({});
     refreshCache();
-  }, [refreshCache]);
+  }, [refreshCache, askConfirm]);
 
   // keyboard shortcuts
   useEffect(() => {
@@ -544,6 +597,14 @@ function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [nextTrack]);
+
+  // ESC closes the confirm modal as a cancel
+  useEffect(() => {
+    if (!confirmDialog) return;
+    const onKey = (e) => { if (e.key === "Escape") { e.preventDefault(); resolveConfirm(false); } };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [confirmDialog, resolveConfirm]);
 
   // edge-swipe gestures: open drawers from screen edges, close by swiping back
   useEffect(() => {
@@ -999,6 +1060,28 @@ function App() {
           </div>
           <button className="ub-cta mono" onClick={applyUpdate}>刷 新</button>
           <button className="ub-x" onClick={() => setUpdateReady(false)} title="稍后"><I.x/></button>
+        </div>
+      )}
+
+      {confirmDialog && (
+        <div className="modal-backdrop" onClick={() => resolveConfirm(false)} role="dialog" aria-modal="true">
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className={"modal-stamp mono" + (confirmDialog.danger ? " danger" : "")}>{confirmDialog.stamp}</div>
+            <h3 className="modal-title">{confirmDialog.title}</h3>
+            <p className="modal-body">{confirmDialog.body}</p>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel mono" onClick={() => resolveConfirm(false)}>
+                {confirmDialog.cancelLabel}
+              </button>
+              <button
+                className={"modal-btn modal-btn-confirm mono" + (confirmDialog.danger ? " danger" : "")}
+                onClick={() => resolveConfirm(true)}
+                autoFocus
+              >
+                {confirmDialog.confirmLabel}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
