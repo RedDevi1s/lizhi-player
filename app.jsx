@@ -464,6 +464,57 @@ function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [nextTrack]);
 
+  // edge-swipe gestures: open drawers from screen edges, close by swiping back
+  useEffect(() => {
+    let startX = 0, startY = 0, edge = null, tracking = false;
+    const EDGE = 22;  // edge zone in px where a swipe-open can begin
+    const TH = 56;    // distance to commit the gesture
+    const onStart = (e) => {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      if (mobileDrawer === "albums") edge = "left-open";
+      else if (mobileDrawer === "rail") edge = "right-open";
+      else {
+        const w = window.innerWidth;
+        if (t.clientX <= EDGE) edge = "left";
+        else if (t.clientX >= w - EDGE) edge = "right";
+        else return;
+      }
+      startX = t.clientX;
+      startY = t.clientY;
+      tracking = true;
+    };
+    const onMove = (e) => {
+      if (!tracking) return;
+      const t = e.touches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      // bail if dominantly vertical (let scrolling win)
+      if (Math.abs(dy) > Math.abs(dx) + 8 && Math.abs(dx) < 24) tracking = false;
+    };
+    const onEnd = (e) => {
+      if (!tracking) return;
+      tracking = false;
+      const t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      const dx = t.clientX - startX;
+      if (edge === "left" && dx > TH) setMobileDrawer("albums");
+      else if (edge === "right" && dx < -TH) setMobileDrawer("rail");
+      else if (edge === "left-open" && dx < -TH) setMobileDrawer(null);
+      else if (edge === "right-open" && dx > TH) setMobileDrawer(null);
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchmove", onMove, { passive: true });
+    window.addEventListener("touchend", onEnd);
+    window.addEventListener("touchcancel", onEnd);
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+      window.removeEventListener("touchcancel", onEnd);
+    };
+  }, [mobileDrawer]);
+
   // search results — flat list of {albumIdx, trackIdx, track, album}
   const searchResults = useMemo(() => {
     const q = search.trim().toLowerCase();
