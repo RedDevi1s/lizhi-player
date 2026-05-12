@@ -1,0 +1,29 @@
+styles/player.css
+  s_26f218614188f1::t_fa6d708d7c0f3c 1181-1185
+  s_26f218614188f1::t_cb819de5be3ec8 378-556
+sw.js
+  s_26f218614188f1::t_4f64c4a14e3eb6 2-3,5,8-9,52,70-74,111-153
+app.jsx
+  s_26f218614188f1::t_4818266cd9eba5 535-556
+  s_26f218614188f1::t_4c282b41ef6157 174-179
+  s_26f218614188f1::t_949107e961cca6 570-572,586-589,594-613
+  s_26f218614188f1::t_961860be8ab208 47-116
+  s_26f218614188f1::t_5c332570635af4 294-378
+  s_26f218614188f1::t_4beb2f6890cd3e 661-690
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "6f0b756b9c5e08f914b66ad2b366e9ef5410e05f",
+  "prompts": {},
+  "sessions": {
+    "s_26f218614188f1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fd861292-cb9c-4473-9d0e-bcc15f59978e",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "huanghongwei <huanghongwei@xiaohongshu.com>"
+    }
+  }
+}
