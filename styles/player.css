@@ -1184,9 +1184,11 @@ body[data-focus="1"] .transport {
   .album-dl-btn { padding: 10px 14px; font-size: 10px; }
   .album-actions { width: 100%; }
   .track { padding: 12px 0; min-height: 48px; }
-  .track:hover { padding-left: 0; background: transparent; }
-  .track:active { background: var(--paper-2); }
-  .track.playing:hover { padding-left: 10px; }
+  /* iOS holds :hover/:active sticky after a tap; if those reset background
+     they paint over .playing's black, leaving paper-coloured text invisible
+     on a paper background until the user moves their finger. */
+  .track:not(.playing):hover { padding-left: 0; background: transparent; }
+  .track:not(.playing):active { background: var(--paper-2); }
   .track .name { font-size: 16px; }
 
   /* Drawers — albums (left) + rail (right) */
