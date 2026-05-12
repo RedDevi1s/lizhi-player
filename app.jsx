@@ -185,6 +185,7 @@ function App() {
 
   // service-worker update banner
   const [updateReady, setUpdateReady] = useState(false);
+  const [appVersion, setAppVersion] = useState(null);
   const swRegRef = useRef(null);
 
   const audioRef = useRef(null);
@@ -319,10 +320,21 @@ function App() {
     return () => window.removeEventListener("focus", onFocus);
   }, [refreshCache]);
 
-  // service-worker update detection
+  // service-worker update detection + version query
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
     let cancelled = false;
+    const askVersion = () => {
+      const ctrl = navigator.serviceWorker.controller;
+      if (!ctrl) return;
+      const ch = new MessageChannel();
+      ch.port1.onmessage = (e) => { if (!cancelled) setAppVersion(e.data); };
+      try { ctrl.postMessage({ type: "VERSION" }, [ch.port2]); } catch {}
+    };
+    askVersion();
+    const onCtrlChange = () => askVersion();
+    navigator.serviceWorker.addEventListener("controllerchange", onCtrlChange);
+
     const watch = (nw) => {
       if (!nw) return;
       nw.addEventListener("statechange", () => {
@@ -345,7 +357,10 @@ function App() {
       const id = setInterval(tick, 30 * 60 * 1000);
       return () => { window.removeEventListener("focus", onFocus); clearInterval(id); };
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      navigator.serviceWorker.removeEventListener("controllerchange", onCtrlChange);
+    };
   }, []);
 
   const applyUpdate = useCallback(() => {
@@ -746,6 +761,10 @@ function App() {
                 ← → — 后退 / 前进 5s<br/>
                 ⌘ + ← → — 上一首 / 下一首
               </p>
+              <div className="version-line mono">
+                <span>BUILD</span>
+                <span className="version-tag">{appVersion || "—"}</span>
+              </div>
             </div>
           )}
           {rail === "poem" && (

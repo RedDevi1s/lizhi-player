@@ -554,6 +554,28 @@ body::after {
   cursor: not-allowed;
 }
 
+/* Build / version stamp at the foot of the 档案 tab */
+.version-line {
+  margin-top: 28px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ink-3);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+.version-line .version-tag {
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  border: 1px solid var(--ink);
+  padding: 2px 8px;
+  background: var(--paper);
+}
+
 /* Right column - queue + lyrics-column */
 .rail {
   grid-row: 1;

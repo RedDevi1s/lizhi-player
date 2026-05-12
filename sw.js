@@ -58,7 +58,12 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data === "SKIP_WAITING") self.skipWaiting();
+  if (event.data === "SKIP_WAITING") { self.skipWaiting(); return; }
+  // Page asks: "what version are you running?" — reply over the supplied port.
+  if (event.data && event.data.type === "VERSION") {
+    const port = event.ports && event.ports[0];
+    if (port) port.postMessage(VERSION);
+  }
 });
 
 self.addEventListener("fetch", (event) => {
