@@ -54,6 +54,12 @@ const I = {
 const AUDIO_CACHE_NAME = "lizhi-audio-v1";
 const cacheSupported = typeof caches !== "undefined";
 
+// `cache.keys()` returns Request objects whose `.url` is percent-encoded;
+// raw URLs in songs.js are CJK-literal. Normalize so the two forms match.
+const normUrl = (u) => {
+  try { return new URL(u, location.href).href; } catch { return u; }
+};
+
 async function listCachedUrls() {
   if (!cacheSupported) return new Set();
   try {
@@ -351,16 +357,18 @@ function App() {
   }, []);
 
   const startDownload = useCallback(async (url) => {
-    if (!url || cachedUrls.has(url)) return;
-    if (downloadAbortRef.current.has(url)) return; // already in flight
+    if (!url) return;
+    const key = normUrl(url);
+    if (cachedUrls.has(key)) return;
+    if (downloadAbortRef.current.has(key)) return; // already in flight
     const ctrl = new AbortController();
-    downloadAbortRef.current.set(url, ctrl);
-    setDownloads(d => ({ ...d, [url]: 0 }));
+    downloadAbortRef.current.set(key, ctrl);
+    setDownloads(d => ({ ...d, [key]: 0 }));
     try {
       await downloadToCache(url, (p) => {
-        setDownloads(d => ({ ...d, [url]: p }));
+        setDownloads(d => ({ ...d, [key]: p }));
       }, ctrl.signal);
-      setCachedUrls(prev => new Set(prev).add(url));
+      setCachedUrls(prev => new Set(prev).add(key));
       if (navigator.storage?.estimate) {
         try {
           const est = await navigator.storage.estimate();
@@ -370,30 +378,32 @@ function App() {
     } catch (e) {
       if (e?.name !== "AbortError") setError("下载失败：" + (e?.message || e));
     } finally {
-      downloadAbortRef.current.delete(url);
+      downloadAbortRef.current.delete(key);
       setDownloads(d => {
-        const { [url]: _, ...rest } = d;
+        const { [key]: _, ...rest } = d;
         return rest;
       });
     }
   }, [cachedUrls]);
 
   const cancelDownload = useCallback((url) => {
-    const ctrl = downloadAbortRef.current.get(url);
+    const ctrl = downloadAbortRef.current.get(normUrl(url));
     if (ctrl) ctrl.abort();
   }, []);
 
   const removeDownload = useCallback(async (url) => {
+    const key = normUrl(url);
     await deleteCachedUrl(url);
     setCachedUrls(prev => {
-      const n = new Set(prev); n.delete(url); return n;
+      const n = new Set(prev); n.delete(key); return n;
     });
     refreshCache();
   }, [refreshCache]);
 
   const downloadAlbum = useCallback(async (alb) => {
     for (const t of alb.tracks) {
-      if (!cachedUrls.has(t.url) && !downloadAbortRef.current.has(t.url)) {
+      const key = normUrl(t.url);
+      if (!cachedUrls.has(key) && !downloadAbortRef.current.has(key)) {
         // eslint-disable-next-line no-await-in-loop
         await startDownload(t.url);
       }
@@ -402,7 +412,7 @@ function App() {
 
   const cancelAlbum = useCallback((alb) => {
     for (const t of alb.tracks) {
-      if (downloadAbortRef.current.has(t.url)) cancelDownload(t.url);
+      if (downloadAbortRef.current.has(normUrl(t.url))) cancelDownload(t.url);
     }
   }, [cancelDownload]);
 
@@ -575,8 +585,8 @@ function App() {
             <div className="blurb">{ALBUM_BLURBS[album.name] || "李志的唱片。"}</div>
             {cacheSupported && (() => {
               const total = album.tracks.length;
-              const cachedN = album.tracks.filter(t => cachedUrls.has(t.url)).length;
-              const dlN = album.tracks.filter(t => downloads[t.url] != null).length;
+              const cachedN = album.tracks.filter(t => cachedUrls.has(normUrl(t.url))).length;
+              const dlN = album.tracks.filter(t => downloads[normUrl(t.url)] != null).length;
               const allDone = cachedN === total;
               return (
                 <div className="album-actions">
@@ -608,8 +618,9 @@ function App() {
           </div>
           {album.tracks.map((t, i) => {
             const isCur = queueAlbumIdx === selectedAlbumIdx && queueIdx === i;
-            const dlP = downloads[t.url];
-            const isCached = cachedUrls.has(t.url);
+            const tKey = normUrl(t.url);
+            const dlP = downloads[tKey];
+            const isCached = cachedUrls.has(tKey);
             const isDl = dlP != null;
             return (
               <div
