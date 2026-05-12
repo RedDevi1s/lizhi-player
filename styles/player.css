@@ -378,17 +378,18 @@ body::after {
 /* Offline-cache button at tail of each track row */
 .track-cache-btn {
   background: transparent;
-  border: 1px solid rgba(26,23,19,0.25);
+  border: 1px solid rgba(26,23,19,0.22);
   color: var(--ink-3);
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   border-radius: 2px;
   padding: 0;
-  transition: background 120ms, color 120ms, border-color 120ms;
+  margin-right: 4px;
+  transition: background 120ms, color 120ms, border-color 120ms, opacity 120ms;
   justify-self: end;
 }
 .track-cache-btn:hover {
@@ -396,11 +397,18 @@ body::after {
   border-color: var(--ink);
   color: var(--ink);
 }
+/* Cached = settled state, so the indicator recedes (the amber dot beside
+   the title already conveys the info). The button still works as a tap
+   target for delete; hover/press reveals the destructive intent. */
 .track-cache-btn.cached {
+  border-color: transparent;
+  background: transparent;
   color: var(--amber-deep);
-  border-color: var(--amber-deep);
+  opacity: 0.55;
 }
+.track-cache-btn.cached svg { width: 11px; height: 11px; }
 .track-cache-btn.cached:hover {
+  opacity: 1;
   background: var(--blood);
   border-color: var(--blood);
   color: var(--paper);
@@ -415,8 +423,9 @@ body::after {
   color: var(--paper-2);
 }
 .track.playing .track-cache-btn.cached {
-  border-color: var(--amber);
+  border-color: transparent;
   color: var(--amber);
+  opacity: 0.75;
 }
 .track.playing .track-cache-btn:hover {
   background: var(--paper);
@@ -1200,9 +1209,10 @@ body[data-focus="1"] .transport {
   .tl-head > :nth-child(4) { grid-column: 3; }
   .tl-head > :last-child { display: none; }
   .track .play-icon { display: none; }
-  .track-cache-btn { width: 40px; height: 40px; }
-  .cache-prog { width: 26px; height: 26px; }
-  .cache-prog-n { font-size: 9px; }
+  .track-cache-btn { width: 32px; height: 32px; margin-right: 6px; }
+  .track-cache-btn.cached svg { width: 12px; height: 12px; }
+  .cache-prog { width: 22px; height: 22px; }
+  .cache-prog-n { font-size: 8px; }
   .album-dl-btn { padding: 10px 14px; font-size: 10px; }
   .album-actions { width: 100%; }
   .track { padding: 12px 0; min-height: 48px; }
